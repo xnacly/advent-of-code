@@ -1,12 +1,12 @@
-use std::ops::Index;
+use std::ops::{Index, IndexMut};
 
 use crate::point::Point;
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Default, Clone, PartialEq)]
 pub struct Grid {
     vec: Vec<Vec<u8>>,
-    pub width: usize,
-    pub height: usize,
+    pub width: i32,
+    pub height: i32,
 }
 
 impl Grid {
@@ -15,30 +15,40 @@ impl Grid {
     }
 
     pub fn from_vec(v: Vec<String>) -> Self {
-        let height = v.len();
+        let height = v.len() as i32;
         let vec: Vec<Vec<u8>> = v
             .into_iter()
             .filter(|x| !x.is_empty())
             .map(|x| x.chars().map(|x| x as u8).collect())
             .collect();
-        let width = vec.get(0).unwrap_or(&vec![]).len();
+        let width = vec.get(0).unwrap_or(&vec![]).len() as i32;
         Grid { vec, height, width }
     }
 
     pub fn columns(&self) -> Vec<Vec<u8>> {
-        let row_length = self.vec[0].len();
-        let mut columns = Vec::with_capacity(row_length);
-        for i in 0..row_length {
-            columns[i] = Vec::with_capacity(row_length);
-            for byte in &self.vec[i] {
-                columns[i].push(*byte);
+        let mut cols = vec![Vec::with_capacity(self.height as usize); self.width as usize];
+
+        for y in 0..self.height as usize {
+            for x in 0..self.width as usize {
+                cols[x].push(self.vec[y][x]);
             }
         }
-        columns
+
+        cols
     }
 
     pub fn rows(&self) -> Vec<Vec<u8>> {
         self.vec.clone()
+    }
+
+    pub fn get(&self, x: i32, y: i32) -> Option<u8> {
+        if y >= 0 && (y as usize) < self.vec.len() {
+            let row = &self.vec[y as usize];
+            if x >= 0 && (x as usize) < row.len() {
+                return Some(row[x as usize]);
+            }
+        }
+        None
     }
 }
 
@@ -47,6 +57,29 @@ impl Index<Point> for Grid {
 
     #[inline]
     fn index(&self, index: Point) -> &Self::Output {
-        &self.vec[index.x as usize][index.y as usize]
+        &self.vec[index.y as usize][index.x as usize]
+    }
+}
+
+impl IndexMut<Point> for Grid {
+    fn index_mut(&mut self, index: Point) -> &mut u8 {
+        &mut self.vec[index.y as usize][index.x as usize]
+    }
+}
+
+use std::fmt;
+
+impl fmt::Debug for Grid {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(
+            f,
+            "Grid {{ width: {}, height: {} }}",
+            self.width, self.height
+        )?;
+        for row in &self.vec {
+            let line = row.iter().map(|&b| b as char).collect::<String>();
+            writeln!(f, "{}", line)?;
+        }
+        Ok(())
     }
 }

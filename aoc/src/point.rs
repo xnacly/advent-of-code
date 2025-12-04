@@ -16,7 +16,7 @@ pub const DIAGONAL: [Point; 8] = [
     Point::new(1, 1),
 ];
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq, Copy)]
 pub struct Point {
     pub x: i32,
     pub y: i32,
