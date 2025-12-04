@@ -60,7 +60,7 @@ fn part_2(lines: Vec<String>) -> usize {
 }
 
 #[cfg(test)]
-mod day3 {
+mod day4 {
     use crate::day4::{part_1, part_2};
 
     #[test]
