@@ -4,8 +4,7 @@ collection of my advent of code solutions and trys
 
 ## New Day:
 
-> requires the value of the session= cookie in the `.cookie` file at the root of this project
-
+> requires the value of the `session=` cookie in the `.cookie` file at the root of this project
 > the `aoc` crate will automatically determine the next day and download
 
 ```shell

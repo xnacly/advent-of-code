@@ -1,64 +1,101 @@
 use clap::Parser;
-use reqwest::Request;
 use std::{fs, io::Write, path::PathBuf};
 
-const TEMPLATE: &'static str = r#"
-fn part1(lines: Vec<String>) -> usize {
-    0
+const TEMPLATE: &str = r#"
+fn part1(lines: Vec<String>) -> Result<usize, Box<dyn std::error::Error>> {
+    Ok(0)
 }
 
-fn part2(lines: Vec<String>) -> usize {
-    0
+fn part2(lines: Vec<String>) -> Result<usize, Box<dyn std::error::Error>> {
+    Ok(0)
 }
 
 #[cfg(test)]
 mod day$DAYHERE$ {
     use crate::day$DAYHERE$::{part1, part2};
+
     #[test]
     fn test_part1() {
-        let t = "";
-        let r = part1(aoc::lines_str(t));
-        assert_eq!(r, 0);
+        let expected = 0;
+        let input = "";
+        assert_eq!(part1(aoc::lines_str(input)).unwrap(), expected);
     }
 
-    // #[test]
-    // fn test_part1_real() {
-    //     dbg!(part1(aoc::lines_file("./input/day$DAYHERE$.txt")));
-    // }
+    #[test]
+    fn test_part1_real() {
+        dbg!(part1(aoc::lines_file("./input/day$DAYHERE$.txt")).unwrap());
+    }
 
-    // #[test]
-    // fn test_part2() {
-    //     let t = r"";
-    //     let r = part2(aoc::lines_str(t));
-    //     assert_eq!(r, 0);
-    // }
+//     #[test]
+//     fn test_part2() {
+//      let expected = 0;
+//      let input = "";
+//      assert_eq!(part1(aoc::lines_str(input)).unwrap(), expected);
+//     }
 
-    // #[test]
-    // fn test_part2_real() {
-    //     dbg!(part2(aoc::lines_file("./input/day$DAYHERE$.txt")));
-    // }
-}"#;
+//     #[test]
+//     fn test_part2_real() {
+//         dbg!(part2(aoc::lines_file("./input/day$DAYHERE$.txt")).unwrap());
+//     }
+}
+"#;
 
-/// aoc is a cli for downloading input files and creating structures in the advent of code context
-#[derive(Debug, clap::Parser)]
+/// CLI for AoC day generation
+#[derive(Parser)]
 struct Config {
-    #[arg(short, long, default_value = "2024")]
+    #[arg(short, long, default_value = "2025")]
     year: String,
     #[arg(short, long, default_value = ".cookie")]
     cookie_file: String,
 }
 
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args = Config::parse();
+
+    let dir: PathBuf = [&args.year].iter().collect();
+    let src_dir = dir.join("src");
+    let input_dir = dir.join("input");
+
+    println!("Ensuring directories exist...");
+    fs::create_dir_all(&src_dir)?;
+    fs::create_dir_all(&input_dir)?;
+    println!("Source directory: {:?}", src_dir);
+    println!("Input directory: {:?}", input_dir);
+
+    let day = new_day(&src_dir).unwrap_or(1);
+    println!("Next day to create: {}", day);
+
+    println!("Reading session cookie from '{}'", &args.cookie_file);
+    let cookie = fs::read_to_string(&args.cookie_file)?
+        .lines()
+        .next()
+        .ok_or("failed to read cookie")?
+        .to_string();
+
+    let url = format!("https://adventofcode.com/{}/day/{}/input", &args.year, day);
+    let dest_file = input_dir.join(format!("day{}.txt", day));
+    println!("Downloading input from {} to {:?}", url, dest_file);
+    download_input(&cookie, &url, &dest_file)?;
+    println!("Input downloaded successfully.");
+
+    println!("Creating Rust source file for day {}...", day);
+    create_day(day, &src_dir)?;
+    println!("Day {} source file created successfully.", day);
+
+    Ok(())
+}
+
 fn new_day(dir: &PathBuf) -> Option<usize> {
+    println!("Scanning {:?} for existing day files...", dir);
     let mut days = dir
         .read_dir()
         .ok()?
         .filter_map(|x| {
             x.ok()?
                 .file_name()
-                .as_os_str()
                 .to_str()?
-                .split(".")
-                .nth(0)?
+                .split('.')
+                .next()?
                 .chars()
                 .skip(3)
                 .collect::<String>()
@@ -67,29 +104,32 @@ fn new_day(dir: &PathBuf) -> Option<usize> {
         })
         .collect::<Vec<_>>();
     days.sort();
-    days.last().map(|x| x.clone() + 1)
+    println!("Found existing days: {:?}", days);
+    days.last().map(|x| x + 1)
 }
 
 fn create_day(day: usize, dir: &PathBuf) -> Result<(), Box<dyn std::error::Error>> {
-    let dir = dir.join("src");
-    let mut oo = fs::OpenOptions::new()
+    let file_path = dir.join(format!("day{}.rs", day));
+    println!("Writing template to {:?}", file_path);
+    let mut f = fs::OpenOptions::new()
         .create_new(true)
         .write(true)
-        .open(dir.join(format!("day{}.rs", day)))?;
-    oo.write_all(TEMPLATE.replace("$DAYHERE$", &day.to_string()).as_bytes())?;
-    fs::OpenOptions::new()
-        .append(true)
-        .open(dir.join("lib.rs"))?
-        .write(format!("mod day{};", day).as_bytes())?;
-    Ok(())
-}
+        .open(&file_path)?;
+    f.write_all(TEMPLATE.replace("$DAYHERE$", &day.to_string()).as_bytes())?;
 
-fn load_cookie(cookie_file_path: &str) -> Result<String, Box<dyn std::error::Error>> {
-    Ok(fs::read_to_string(cookie_file_path)?
-        .lines()
-        .nth(0)
-        .ok_or("failed to read the cookie")?
-        .to_string())
+    let lib_path = dir.join("lib.rs");
+    println!("Updating {:?}", lib_path);
+    let mut lib_content = fs::read_to_string(&lib_path).unwrap_or_default();
+    let mod_line = format!("mod day{};", day);
+    if !lib_content.contains(&mod_line) {
+        lib_content.push_str(&format!("{}{}", mod_line, "\n"));
+        fs::write(&lib_path, lib_content)?;
+        println!("Added '{}' to lib.rs", mod_line);
+    } else {
+        println!("lib.rs already contains '{}'", mod_line);
+    }
+
+    Ok(())
 }
 
 fn download_input(
@@ -97,47 +137,13 @@ fn download_input(
     url: &str,
     destination: &PathBuf,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    fs::create_dir_all(destination.parent().ok_or("failed to get parent")?)?;
+    println!("Sending request to {}", url);
     let client = reqwest::blocking::Client::new();
     let res = client
-        .request(reqwest::Method::GET, url)
+        .get(url)
         .header("cookie", format!("session={}", cookie))
         .send()?;
-    let mut oo = fs::OpenOptions::new()
-        .create_new(true)
-        .write(true)
-        .open(destination)?;
-    Ok(oo.write_all(&res.bytes()?.to_vec())?)
-}
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args = Config::parse();
-
-    let dir: PathBuf = ["./", &args.year].into_iter().collect();
-
-    let day = new_day(&dir.join("src")).unwrap_or(1);
-    println!("aoc: found day {}, creating new day {}", day - 1, day);
-
-    println!("aoc: reading cookie from {}", &args.cookie_file);
-    let cookie = load_cookie(&args.cookie_file)?;
-
-    let url = format!("https://adventofcode.com/{}/day/{}/input", &args.year, day);
-    let destination: PathBuf = [
-        dir.to_str().ok_or("failed to get string from dir")?,
-        "input",
-        &format!("day{}.txt", day),
-    ]
-    .iter()
-    .collect();
-    println!(
-        "aoc: downloading puzzle input from {:?} into {:?}",
-        &url, &destination
-    );
-    if let Err(err) = download_input(&cookie, &url, &destination) {
-        println!("failed to download the input: {}", err);
-    }
-    if let Err(err) = create_day(day, &dir) {
-        println!("failed to create the source file: {}", err);
-    }
+    fs::write(destination, res.bytes()?)?;
+    println!("Saved input to {:?}", destination);
     Ok(())
 }
