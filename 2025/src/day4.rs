@@ -1,7 +1,7 @@
 use aoc::point::{self, Point};
 
 fn part_1(lines: Vec<String>) -> usize {
-    let grid = aoc::grid::Grid::from_vec(lines);
+    let grid = aoc::grid::Grid::from_vec(&lines);
     let mut count = 0;
 
     for y in 0..grid.height {
@@ -27,7 +27,7 @@ fn part_1(lines: Vec<String>) -> usize {
 }
 
 fn part_2(lines: Vec<String>) -> usize {
-    let mut grid = aoc::grid::Grid::from_vec(lines);
+    let mut grid = aoc::grid::Grid::from_vec(&lines);
     let mut removed = 0;
 
     loop {

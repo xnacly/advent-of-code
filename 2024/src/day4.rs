@@ -5,7 +5,7 @@ fn check(grid: &Grid) -> usize {
 }
 
 fn part1(lines: Vec<String>) -> usize {
-    let grid = Grid::from_vec(lines);
+    let grid = Grid::from_vec(&lines);
     dbg!(grid
         .rows()
         .into_iter()
