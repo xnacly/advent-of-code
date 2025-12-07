@@ -41,14 +41,17 @@ impl Grid {
         self.vec.clone()
     }
 
-    pub fn get(&self, x: i32, y: i32) -> Option<u8> {
-        if y >= 0 && (y as usize) < self.vec.len() {
-            let row = &self.vec[y as usize];
-            if x >= 0 && (x as usize) < row.len() {
-                return Some(row[x as usize]);
-            }
+    pub fn get(&self, x: usize, y: usize) -> Option<u8> {
+        self.vec.get(y).and_then(|row| row.get(x)).copied()
+    }
+
+    pub fn get_point(&self, p: Point) -> Option<u8> {
+        if p.x < 0 || p.y < 0 {
+            return None;
         }
-        None
+
+        let (xu, yu) = (p.x as usize, p.y as usize);
+        self.vec.get(yu).and_then(|row| row.get(xu)).copied()
     }
 
     pub fn transpose(&mut self) {
@@ -80,6 +83,34 @@ impl Index<Point> for Grid {
 impl IndexMut<Point> for Grid {
     fn index_mut(&mut self, index: Point) -> &mut u8 {
         &mut self.vec[index.y as usize][index.x as usize]
+    }
+}
+
+impl Index<usize> for Grid {
+    type Output = [u8];
+
+    fn index(&self, row: usize) -> &Self::Output {
+        &self.vec[row]
+    }
+}
+
+impl IndexMut<usize> for Grid {
+    fn index_mut(&mut self, row: usize) -> &mut Self::Output {
+        &mut self.vec[row]
+    }
+}
+
+impl Index<i32> for Grid {
+    type Output = [u8];
+
+    fn index(&self, row: i32) -> &Self::Output {
+        &self.vec[row as usize]
+    }
+}
+
+impl IndexMut<i32> for Grid {
+    fn index_mut(&mut self, row: i32) -> &mut Self::Output {
+        &mut self.vec[row as usize]
     }
 }
 

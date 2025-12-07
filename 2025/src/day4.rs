@@ -7,14 +7,13 @@ fn part_1(lines: Vec<String>) -> usize {
     for y in 0..grid.height {
         for x in 0..grid.width {
             let p = Point::new(x, y);
-
-            if grid.get(p.x, p.y) != Some(b'@') {
+            if grid.get(p.x as usize, p.y as usize) != Some(b'@') {
                 continue;
             }
 
             let neighbors = point::DIAGONAL
                 .iter()
-                .filter(|&&dir| grid.get((p + dir).x, (p + dir).y) == Some(b'@'))
+                .filter(|&&dir| grid.get((p + dir).x as usize, (p + dir).y as usize) == Some(b'@'))
                 .count();
 
             if neighbors < 4 {
@@ -36,13 +35,15 @@ fn part_2(lines: Vec<String>) -> usize {
             for x in 0..grid.width {
                 let p = Point::new(x, y);
 
-                if grid.get(p.x, p.y) != Some(b'@') {
+                if grid.get(p.x as usize, p.y as usize) != Some(b'@') {
                     continue;
                 }
 
                 let neighbors = point::DIAGONAL
                     .iter()
-                    .filter(|&&dir| grid.get((p + dir).x, (p + dir).y) == Some(b'@'))
+                    .filter(|&&dir| {
+                        grid.get((p + dir).x as usize, (p + dir).y as usize) == Some(b'@')
+                    })
                     .count();
 
                 if neighbors < 4 {

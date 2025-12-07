@@ -1,7 +1,3 @@
-use std::collections::HashSet;
-
-use aoc::point::{self, Point};
-
 fn part_1(lines: Vec<String>) -> Result<usize, Box<dyn std::error::Error>> {
     let mut separator = 0;
     let mut ranges: Vec<(usize, usize)> = vec![];
